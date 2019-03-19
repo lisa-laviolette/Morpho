@@ -5,4 +5,4 @@
 *.Rdata
 *.csv.gz
 # exclude plots
-*.pdf
+plots/*
