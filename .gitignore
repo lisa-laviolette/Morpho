@@ -1,0 +1,8 @@
+# exclude R stuff
+.Rhistory
+.Rproj.user
+# exclude temporary data
+*.Rdata
+*.csv.gz
+# exclude plots
+*.pdf
