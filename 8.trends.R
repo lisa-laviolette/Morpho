@@ -142,6 +142,12 @@ ggplot() +
   geom_abline(aes(slope=slope.gls, intercept=intercept.gls), data=statsp, colour="red", size=0.75, alpha=0.7) + theme(axis.title.y=element_blank())
 ggsave("plots/trends.pdf", width=7, height=10)
 
+ggplot() +
+  facet_grid(id~., scales="free_y") +
+  geom_path(aes(date, deseason), data=filter(dp, id %in% c("Zooplankton", "Morph. Divergence")), colour="grey20") +
+  # geom_smooth(aes(date, deseason), data=filter(dp, id %in% c("Zooplankton", "Morph. Divergence")), colour="blue", se=FALSE, span=0.5) +
+  geom_abline(aes(slope=slope.gls, intercept=intercept.gls), data=filter(statsp, id %in% c("Zooplankton", "Morph. Divergence")), colour="red", size=0.75, alpha=0.7) + theme(axis.title.y=element_blank())
+ggsave("plots/trends_zoo.pdf", width=7, height=4)
 
 
 
