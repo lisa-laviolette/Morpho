@@ -63,6 +63,22 @@ z <- bind_cols(z, as.tibble(pcaw$ind$coord[,1:4]))
 # save to disk
 save(z, file="3.Rdata")
 
+## Represent space ----
+
+z <- mutate(z,
+  path=paste0("/home/jiho/ecotaxa_ml-raw/zooscanPtBWP2/imgs/",objid,".jpg"),
+  exists=file.exists(path)
+)
+
+zz <- filter(z, exists)
+pcaw <- morpho_space(
+  zz %>% select(area:perimmajor),
+  w=zz$conc/sum(zz$conc)
+)
+p <- ggmorph_tile(pcaw, imgs=zz$path, steps=13, scale=0.005, dimensions=c(1,2))
+ggsave(p, filename="plots/pca_morphs12.png", width=10, height=10)
+p <- ggmorph_tile(pcaw, imgs=zz$path, steps=13, scale=0.005, dimensions=c(3,4))
+ggsave(p, filename="plots/pca_morphs34.png", width=10, height=10)
 
 ## Select objects in specific regions of the PCA space ----
 # TODO to re-run, was not redone for SFEcologie2018 on 2018-10-23
