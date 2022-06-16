@@ -205,8 +205,11 @@ ok <- future_walk2(
   .x=zoo_to_crop$orig_img, .y=zoo_to_crop$cropped_img,
   function(x, y) {
     img_read(x) |>
+      # remove legend
       img_chop(b=31) |>
+      # keep only largest object
       img_extract_largest(threshold=0.1/255, quiet=TRUE) |>
+      # write as png
       img_write(y)
   },
   .progress=TRUE
