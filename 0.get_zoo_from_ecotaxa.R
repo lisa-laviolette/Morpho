@@ -4,12 +4,21 @@
 # (c) 2018 GNU General Public License v3
 #     Jean-Olivier Irisson, irisson@normalesup.org
 
+# NB: Several steps are long; run as job in RStudio.
 
 ## Setup ----
 
 library("tidyverse")
+library("furrr")
+plan(multisession, workers=20)
+
 # remotes::install_github("jiho/ecotaxar")
 library("ecotaxar")
+# remotes::install_github("jiho/morphr")
+library("morphr")
+
+# define directory to hold the images (outside of this repo, since they are big)
+img_dir <- "~/datasets/pointB_wp2/"
 
 
 message("Download records from EcoTaxa") # ----
@@ -50,6 +59,11 @@ zoo <- tbl(db, "objects") |>
   # get zooprocess features
   select(projid, sampleid, acquisid, processid, objid, date=objdate, classif_id, classif_qual, n01:n69) |>
   map_names(maps$mappingobj) |>
+  # get images
+  left_join(
+    tbl(db, "images") |>
+      select(objid, img_path=file_name)
+  ) |>
   # get info to compute concentration (volume and fractionning rate)
   left_join(
     tbl(db, "samples") |>
@@ -139,5 +153,66 @@ zoo <- mutate(zoo, conc = 1 * sub_part / tot_vol) |>
 # reorder columns
 zoo <- select(zoo, date, taxon, lineage, conc, everything())
 
-write_csv(zoo, "data/zoo.csv.gz")
+
+message("Download images from EcoTaxa") # ----
+
+# define the location of images
+orig_img_dir <- str_c(img_dir, "orig")
+dir.create(orig_img_dir, showWarnings=FALSE, recursive=TRUE)
+cropped_img_dir <- str_c(img_dir, "cropped")
+dir.create(cropped_img_dir, showWarnings=FALSE, recursive=TRUE)
+
+zoo <- zoo |>
+  mutate(
+    source_img=str_c("/remote/ecotaxa/vault/", img_path),
+    orig_img=str_c(orig_img_dir, "/", objid, ".jpg") |> path.expand(),
+    cropped_img=str_c(cropped_img_dir, "/", objid, ".png") |> path.expand()
+  )
+
+# remove extra original images
+existing_orig_imgs <- list.files(orig_img_dir, full=TRUE)
+to_remove <- existing_orig_imgs[!existing_orig_imgs %in% zoo$orig_img]
+message("  remove ", length(to_remove), " extra original images")
+ok <- unlink(to_remove)
+
+# get (missing) original images (in parallel)
+zoo_to_copy <- filter(zoo, ! orig_img %in% existing_orig_imgs)
+message("  copy ", nrow(zoo_to_copy), " original images from EcoTaxa")
+ok <- future_map2_lgl(
+  .x=zoo_to_copy$source_img, .y=zoo_to_copy$orig_img,
+  ~file.copy(.x, .y),
+  .progress=TRUE
+)
+all(ok)
+
+
+# remove extra cropped images
+existing_cropped_imgs <- list.files(cropped_img_dir, full=TRUE)
+to_remove <- existing_cropped_imgs[!existing_cropped_imgs %in% zoo$cropped_img]
+message("  remove ", length(to_remove), " extra cropped images")
+ok <- unlink(to_remove)
+
+# crop (missing) images (in parallel)
+zoo_to_crop <- filter(zoo, ! cropped_img %in% existing_cropped_imgs)
+message("  crop ", nrow(zoo_to_crop), " original images")
+ok <- future_walk2(
+  .x=zoo_to_crop$orig_img, .y=zoo_to_crop$cropped_img,
+  function(x, y) {
+    img_read(x) |>
+      img_chop(b=31) |>
+      img_extract_largest(quiet=TRUE) |>
+      img_write(y)
+  },
+  .progress=TRUE
+)
+
+
+## Save data ----
+
+zoo |>
+  select(-source_img, -img_path) |>
+  write_csv("data/zoo.csv.gz")
 # save(zoo, file="0.Rdata")
+
+
+
