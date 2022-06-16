@@ -40,7 +40,7 @@ maps <- projs |> select(starts_with("mapping")) |> distinct()
 maps <- maps[1,]
 
 # get objects for all projects of interest
-obj <- tbl(db, "objects") |>
+zoo <- tbl(db, "objects") |>
   filter(projid %in% !!proj_ids) |>
   # get zooprocess features
   select(projid, sampleid, acquisid, processid, objid, date=objdate, classif_id, classif_qual, n01:n69) |>
