@@ -206,7 +206,7 @@ ok <- future_walk2(
   function(x, y) {
     img_read(x) |>
       img_chop(b=31) |>
-      img_extract_largest(quiet=TRUE) |>
+      img_extract_largest(threshold=0.1/255, quiet=TRUE) |>
       img_write(y)
   },
   .progress=TRUE
