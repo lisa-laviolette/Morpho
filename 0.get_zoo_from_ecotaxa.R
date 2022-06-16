@@ -10,7 +10,7 @@ library("ecotaxar")
 
 # connect to EcoTaxa
 db <- db_connect_ecotaxa()
-tbl_ecotaxa(db)
+
 
 # list PtB WP2 project
 proj_ids <- ids <- c(292, 293, 294, 295, 297, 300, 301, 302, 303, 304, 337)
@@ -36,33 +36,33 @@ proj_ids <- ids <- c(292, 293, 294, 295, 297, 300, 301, 302, 303, 304, 337)
 projs <- filter(projects, projid %in% proj_ids) |> collect()
 # check that all mappings are the same
 maps <- projs |> select(starts_with("mapping")) |> distinct()
-# -> only different in process
+# -> only different in process, keep one
 maps <- maps[1,]
 
-# get objects and zooprocess features
-obj <- filter(objects, projid %in% proj_ids[1]) |>
-  select(objid, date=objdate, classif_id, classif_qual, n01:n69, projid, sampleid, acquisid, processid)
-  map_names(maps$mappingobj)
-
-# get metadata: sampled volume, motodata fraction, pixel resolution
-zoo <- obj |>
-  # get info to compute concentration
+# get objects for all projects of interest
+obj <- tbl(db, "objects") |>
+  filter(projid %in% !!proj_ids) |>
+  # get zooprocess features
+  select(projid, sampleid, acquisid, processid, objid, date=objdate, classif_id, classif_qual, n01:n69) |>
+  map_names(maps$mappingobj) |>
+  # get info to compute concentration (volume and fractionning rate)
   left_join(
-    filter(samples, projid %in% proj_ids) |> collect() |>
+    tbl(db, "samples") |>
       map_names(maps$mappingsample) |>
-      select(projid, sampleid, orig_sampleid=orig_id, tot_vol)
+      select(sampleid, orig_sampleid=orig_id, tot_vol)
   ) |>
   left_join(
-    filter(acquisitions, projid %in% proj_ids) |> collect() |>
+    tbl(db, "acquisitions") |>
       map_names(maps$mappingacq) |>
-      select(projid, acquisid, sub_part)
+      select(acquisid, sub_part)
   ) |>
   # # get info to compute features in real world measures
   # left_join(
-  #   filter(process, projid %in% proj_ids) |> collect() |>
+  #   tbl(db, "process") |>
   #     map_names(maps$mappingprocess) |>
-  #     select(projid, processid, particle_pixel_size_mm, img_resolution)
+  #     select(processid, particle_pixel_size_mm, img_resolution)
   # ) |>
+  collect() |>
   # mutate_at(vars(tot_vol, sub_part, particle_pixel_size_mm, img_resolution), as.numeric)
   mutate_at(vars(tot_vol, sub_part), as.numeric)
 
