@@ -78,6 +78,7 @@ zoo <- mutate(zoo,
   lineage = lineage(classif_id, taxo)
 )
 
+db_disconnect_ecotaxa(db)
 
 
 message("Cleanup data table") # ----
