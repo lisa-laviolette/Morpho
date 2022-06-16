@@ -9,7 +9,7 @@ library("tidyverse")
 library("ecotaxar")
 
 # connect to EcoTaxa
-db <- src_ecotaxa()
+db <- db_connect_ecotaxa()
 tbl_ecotaxa(db)
 
 # list PtB WP2 project
