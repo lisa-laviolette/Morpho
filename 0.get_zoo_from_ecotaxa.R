@@ -72,7 +72,7 @@ zoo <- tbl(db, "objects") |>
   mutate_at(vars(tot_vol, sub_part), as.numeric)
 
 # get taxonomic classification
-taxo <- extract_taxo(db, zoo$classif_id)
+taxo <- tbl(db, "taxonomy") |> collect()
 zoo <- mutate(zoo,
   taxon = taxo_name(classif_id, taxo, unique=TRUE),
   lineage = lineage(classif_id, taxo)
