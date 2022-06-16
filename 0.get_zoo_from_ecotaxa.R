@@ -74,6 +74,7 @@ zoo <- mutate(zoo,
 )
 
 # cleanup useless records
+nrow(zoo)
 zoo <- zoo |>
   filter(
     # not validated
@@ -81,6 +82,7 @@ zoo <- zoo |>
     # or living
     str_detect(lineage, "^living")
   )
+nrow(zoo)
 
 zoo <- zoo |>
   # useless columns
