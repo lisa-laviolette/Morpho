@@ -16,53 +16,53 @@ tbl_ecotaxa(db)
 proj_ids <- ids <- c(292, 293, 294, 295, 297, 300, 301, 302, 303, 304, 337)
 
 # # check that all samples are fully validated
-# objects %>%
-#   filter(projid %in% proj_ids) %>%
-#   group_by(sampleid) %>% summarise(percent_valid=count(classif_qual=="V")/n()) %>%
+# objects |>
+#   filter(projid %in% proj_ids) |>
+#   group_by(sampleid) |> summarise(percent_valid=count(classif_qual=="V")/n()) |>
 #   filter(percent_valid < 1)
 # # -> OK
 
 # # check zooscan models
-# acqs <- acquisitions %>%
-#   filter(projid %in% proj_ids) %>% collect() %>%
-#   group_by(projid) %>% do({
+# acqs <- acquisitions |>
+#   filter(projid %in% proj_ids) |> collect() |>
+#   group_by(projid) |> do({
 #     map <- filter(projs, projid == .$projid[1])$mappingacq
-#     map_names(., map) %>% select(projid, instrument, hardware, software, imgtype, scan_date)
-#   }) %>% ungroup() %>%
+#     map_names(., map) |> select(projid, instrument, hardware, software, imgtype, scan_date)
+#   }) |> ungroup() |>
 #   left_join(select(projs, projid, title))
 # count(acqs, title, software)
 
 # get metadata mappings for each project
-projs <- filter(projects, projid %in% proj_ids) %>% collect()
+projs <- filter(projects, projid %in% proj_ids) |> collect()
 # check that all mappings are the same
-maps <- projs %>% select(starts_with("mapping")) %>% distinct()
+maps <- projs |> select(starts_with("mapping")) |> distinct()
 # -> only different in process
 maps <- maps[1,]
 
 # get objects and zooprocess features
-obj <- filter(objects, projid %in% proj_ids) %>%
-  select(objid, date=objdate, classif_id, classif_qual, n01:n69, projid, sampleid, acquisid, processid) %>% collect(n=Inf) %>%
+obj <- filter(objects, projid %in% proj_ids[1]) |>
+  select(objid, date=objdate, classif_id, classif_qual, n01:n69, projid, sampleid, acquisid, processid)
   map_names(maps$mappingobj)
 
 # get metadata: sampled volume, motodata fraction, pixel resolution
-zoo <- obj %>%
+zoo <- obj |>
   # get info to compute concentration
   left_join(
-    filter(samples, projid %in% proj_ids) %>% collect() %>%
-      map_names(maps$mappingsample) %>%
+    filter(samples, projid %in% proj_ids) |> collect() |>
+      map_names(maps$mappingsample) |>
       select(projid, sampleid, orig_sampleid=orig_id, tot_vol)
-  ) %>%
+  ) |>
   left_join(
-    filter(acquisitions, projid %in% proj_ids) %>% collect() %>%
-      map_names(maps$mappingacq) %>%
+    filter(acquisitions, projid %in% proj_ids) |> collect() |>
+      map_names(maps$mappingacq) |>
       select(projid, acquisid, sub_part)
-  ) %>%
+  ) |>
   # # get info to compute features in real world measures
   # left_join(
-  #   filter(process, projid %in% proj_ids) %>% collect() %>%
-  #     map_names(maps$mappingprocess) %>%
+  #   filter(process, projid %in% proj_ids) |> collect() |>
+  #     map_names(maps$mappingprocess) |>
   #     select(projid, processid, particle_pixel_size_mm, img_resolution)
-  # ) %>%
+  # ) |>
   # mutate_at(vars(tot_vol, sub_part, particle_pixel_size_mm, img_resolution), as.numeric)
   mutate_at(vars(tot_vol, sub_part), as.numeric)
 
@@ -74,7 +74,7 @@ zoo <- mutate(zoo,
 )
 
 # cleanup useless records
-zoo <- zoo %>%
+zoo <- zoo |>
   filter(
     # not validated
     classif_qual == "V",
@@ -82,9 +82,9 @@ zoo <- zoo %>%
     str_detect(lineage, "^living")
   )
 
-zoo <- zoo %>%
+zoo <- zoo |>
   # useless columns
-  select(-classif_id, -classif_qual, -lat_end, -lon_end, -projid, -sampleid, -acquisid, -processid, -orig_sampleid) %>%
+  select(-classif_id, -classif_qual, -lat_end, -lon_end, -projid, -sampleid, -acquisid, -processid, -orig_sampleid) |>
   # descriptors that are
   select(
     # not meaningful
@@ -99,7 +99,7 @@ sds[which(sds == 0)]
 zoo <- select(zoo, -starts_with("comp"))
 
 # remove some  taxa meaningless for morphological analysis
-zoo <- zoo %>% filter(
+zoo <- zoo |> filter(
   # not relevant taxomically
   !str_detect(lineage, "Hexapoda"),
   !str_detect(taxon, "othertocheck"), !str_detect(taxon, "seaweed"),
@@ -113,7 +113,7 @@ zoo <- zoo %>% filter(
 )
 
 # compute individual "concentration"
-zoo <- mutate(zoo, conc = 1 * sub_part / tot_vol) %>%
+zoo <- mutate(zoo, conc = 1 * sub_part / tot_vol) |>
   select(-sub_part, -tot_vol)
 
 # reorder columns

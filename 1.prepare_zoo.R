@@ -15,26 +15,26 @@ source("lib_plot.R")
 z <- read_csv("data/zoo.csv.gz", col_types=cols())
 
 # # make a list of available taxa
-# z %>% group_by(lineage, taxon) %>% summarise(n=n(), conc=sum(conc)) %>% write_tsv("data/taxo.tsv")
+# z |> group_by(lineage, taxon) |> summarise(n=n(), conc=sum(conc)) |> write_tsv("data/taxo.tsv")
 
 # read the groupings
-taxo <- read_csv("data/taxo_grouped - Sheet1.csv", col_types=cols()) %>%
+taxo <- read_csv("data/taxo_grouped - Sheet1.csv", col_types=cols()) |>
   select(taxon, level1)
 
 # replace taxon by the grouping
-z <- left_join(z, taxo, by="taxon") %>%
-  select(-taxon, taxon=level1) %>%
-  select(date, taxon, lineage, conc, objid, everything()) %>%
+z <- left_join(z, taxo, by="taxon") |>
+  select(-taxon, taxon=level1) |>
+  select(date, taxon, lineage, conc, objid, everything()) |>
   # remove extra taxa (which were marked as NA) = mistakes etc.
   filter(!is.na(taxon))
 # compute total concentration per taxon
-z %>% group_by(taxon) %>% summarise(conc=sum(conc)) %>% arrange(conc)
+z |> group_by(taxon) |> summarise(conc=sum(conc)) |> arrange(conc)
 
 
 ## Subsample organisms to correct for sampling effort ----
 
 # inspect number of objects on zooscan and concentration per date
-effort <- z %>% group_by(date) %>% summarise(n=n(), conc=sum(conc))
+effort <- z |> group_by(date) |> summarise(n=n(), conc=sum(conc))
 
 ggplot(effort, aes(date, conc)) + geom_path() + geom_smooth(span=0.05, se=F, n=1000, colour="red") + date_x + scale_y_continuous(trans="sqrt")
 # -> seasonal signal in terms of concentration
@@ -51,7 +51,7 @@ threshold <- 2000
 # make random subsampling reproducible
 set.seed(1)
 
-zs <- z %>% group_by(date) %>% do({
+zs <- z |> group_by(date) |> do({
   # determine how many objects to keep
   #=`threshold` or the actual number of objects when there are fewer than `threshold`
   n_rows <- nrow(.)
@@ -65,7 +65,7 @@ zs <- z %>% group_by(date) %>% do({
 })
 
 # check that it matches what we had before
-effort_s <- zs %>% group_by(date) %>% summarise(n=n(), conc=sum(conc))
+effort_s <- zs |> group_by(date) |> summarise(n=n(), conc=sum(conc))
 ggplot(mapping=aes(date, conc)) +
   geom_path(data=effort, colour="black") +
   geom_path(data=effort_s, colour="red") +
@@ -73,8 +73,8 @@ ggplot(mapping=aes(date, conc)) +
 # -> the total matches of course, because we corrected
 
 # per group
-effort <- z %>% group_by(date, taxon) %>% summarise(n=n(), conc=sum(conc))
-effort_s <- zs %>% group_by(date, taxon) %>% summarise(n=n(), conc=sum(conc))
+effort <- z |> group_by(date, taxon) |> summarise(n=n(), conc=sum(conc))
+effort_s <- zs |> group_by(date, taxon) |> summarise(n=n(), conc=sum(conc))
 ggplot(mapping=aes(date, conc)) +
   geom_path(data=filter(effort, taxon=="Copepoda"), colour="black") +
   geom_path(data=filter(effort_s, taxon=="Copepoda"), colour="red") +
@@ -111,12 +111,12 @@ trim <- function(x, p=0.001, side="right") {
 }
 
 # # plot all histograms
-# p <- gather(sample_frac(z, 0.1), key="var", val="val", area:perimmajor) %>%
+# p <- gather(sample_frac(z, 0.1), key="var", val="val", area:perimmajor) |>
 #   ggplot() + geom_histogram(aes(x=val), bins=50) + facet_wrap(~var, scales="free")
 # ggsave(p, "plots/histograms_of_features.pdf", width=20, height=10)
 
 # transform features to look more normal
-zt <- z %>% mutate(
+zt <- z |> mutate(
   area = log10(trim(area)),
   mean = trim(mean, side="left"),
   stddev = trim(stddev),
@@ -163,13 +163,13 @@ zt <- z %>% mutate(
 )
 
 # # plot all histograms
-# p <- gather(sample_frac(z, 0.2), key="var", val="val", area:perimmajor) %>%
+# p <- gather(sample_frac(z, 0.2), key="var", val="val", area:perimmajor) |>
 #   ggplot() + geom_histogram(aes(x=val), bins=50) + facet_wrap(~var, scales="free")
 # ggsave(p, "plots/histograms_of_features_normalised.pdf", width=20, height=10)
 
 # eliminate extreme inviduals
 # = more than 5 features are NA
-n_na <- select(zt, area:perimmajor) %>% apply(1, function(x) {sum(is.na(x))})
+n_na <- select(zt, area:perimmajor) |> apply(1, function(x) {sum(is.na(x))})
 zt <- zt[n_na<=5,]
 
 # replace NAs by the mean of the column

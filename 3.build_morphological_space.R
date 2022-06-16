@@ -66,7 +66,7 @@ save(z, file="3.Rdata")
 ## Represent space ----
 
 z <- mutate(z,
-  path=paste0("/home/jiho/ecotaxa_ml-raw/zooscanPtBWP2/imgs/",objid,".jpg"),
+  path=paste0("/home/jiho/ecotaxa_ml-raw/zooscanPtBWP2/imgs/",objid,".jpg"), ###To Fix
   exists=file.exists(path)
 )
 

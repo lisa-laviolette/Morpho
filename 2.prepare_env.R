@@ -12,7 +12,7 @@ library("lubridate")
 library("castr")
 
 # read data
-env <- read_csv("data/radehydro_std.csv", col_types=cols(), guess_max=100000) %>%
+env <- read_csv("data/radehydro_std.csv", col_types=cols(), guess_max=100000) |>
   mutate(date=as.Date(date_time))
 
 # eliminate data with bad qc
@@ -20,18 +20,18 @@ envq <- select(env, date, depth, starts_with("q_"))
 envv <- select(env, str_replace(names(envq), "q_", ""))
 env <- left_join(
   gather(envv, key=var, val=val, -date, -depth),
-  gather(envq, key=var, val=qc, -date, -depth) %>% mutate(var=str_replace(var, "q_", ""))
+  gather(envq, key=var, val=qc, -date, -depth) |> mutate(var=str_replace(var, "q_", ""))
 )
 env$val[! env$qc %in% c(2, 5, 21, 22)] <- NA
 env <- select(env, -qc)
 
 # get pH
-ph <- read_csv("data/radehydro_pH.csv", col_types=cols()) %>%
-  mutate(date=as.Date(sampling_date)) %>%
+ph <- read_csv("data/radehydro_pH.csv", col_types=cols()) |>
+  mutate(date=as.Date(sampling_date)) |>
   # keep only relevant variables
-  select(date, depth, pH, pCO2) %>%
+  select(date, depth, pH, pCO2) |>
   # reduce replicates
-  group_by(date, depth) %>% summarise_all(mean, na.rm=T) %>% ungroup() %>%
+  group_by(date, depth) |> summarise_all(mean, na.rm=T) |> ungroup() |>
   # convert to tall format
   gather(key="var", value="val", pH, pCO2)
 # add it to the rest
@@ -39,15 +39,15 @@ env <- bind_rows(env, ph)
 
 
 # subsample data
-env <- env %>%
+env <- env |>
   # keep only some years
-  filter(date >= "2000-01-01", date < "2018-01-01") %>%
+  filter(date >= "2000-01-01", date < "2018-01-01") |>
   # and some variables
   filter(var %in% c("temperature", "salinity", "sigma_theta", "fluorescence", "oxygen_winkler", "no3", "no2", "po4", "sioh4", "poc", "pon", "chla", "pH", "pCO2"))
 
 # change some variable names for simplicity
-env <- spread(env, var, val) %>%
-  rename(density=sigma_theta, oxygen=oxygen_winkler, fluo=fluorescence) %>%
+env <- spread(env, var, val) |>
+  rename(density=sigma_theta, oxygen=oxygen_winkler, fluo=fluorescence) |>
   gather(var, val, -date, -depth)
 
 # cleanup some values
@@ -61,9 +61,9 @@ env <- gather(env, key=var, value=val, -date, -depth)
 
 
 # integrate all variables over depth
-envi <- env %>%
-  group_by(date, var) %>%
-  summarise(val=integrate(val, depth, from=0, to=75, fun="mean")) %>%
+envi <- env |>
+  group_by(date, var) |>
+  summarise(val=integrate(val, depth, from=0, to=75, fun="mean")) |>
   ungroup()
 
 # plot resulting series

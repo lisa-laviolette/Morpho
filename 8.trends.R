@@ -70,7 +70,7 @@ s$var <- factor(s$var, levels=levels(ds$var))
 s <- mutate(s, deseason = trend+ifelse(is.na(remainder), 0, remainder))
 
 # x <- filter(ds, var == "pon")
-stats <- s %>% group_by(period, var) %>%
+stats <- s |> group_by(period, var) |>
   do({
     x <- .
     # message(x$var[1], " ", nrow(x))
@@ -101,11 +101,11 @@ stats <- s %>% group_by(period, var) %>%
 
     # extract diagnostic information for both approaches
     bind_cols(
-      glance(mkt) %>% select(p.value) %>% set_names(., paste0, ".mk"),
-      glance(m) %>% select(r.squared, p.value, intercept, slope, cor.struct, acf=acf1) %>% set_names(., paste0, ".gls")
+      glance(mkt) |> select(p.value) |> set_names(., paste0, ".mk"),
+      glance(m) |> select(r.squared, p.value, intercept, slope, cor.struct, acf=acf1) |> set_names(., paste0, ".gls")
     )
-  }) %>%
-  ungroup() %>%
+  }) |>
+  ungroup() |>
   mutate(
     acf.gls = abs(acf.gls),
     signif.mk = signif_stars(p.value.mk),
@@ -122,17 +122,17 @@ write_tsv(stats, "plots/trend_stats.tsv")
 
 vars <- c(Temperature="2000-temperature", NO3="2000-no3", `Fluo (Chl a)`="2000-fluo", `Part. org. Nitrogen`="2000-pon", Zooplankton="2009-conc", `Morph. Divergence`="2009-MDiv")
 
-dp <- s %>%
-  mutate(id=str_c(period, var)) %>%
-  filter(id %in% vars) %>%
-  mutate(id=names(vars)[match(id, vars)]) %>%
+dp <- s |>
+  mutate(id=str_c(period, var)) |>
+  filter(id %in% vars) |>
+  mutate(id=names(vars)[match(id, vars)]) |>
   mutate(id=factor(id, levels=names(vars)))
 
 
-statsp <- stats %>%
-  mutate(id=str_c(period, var)) %>%
-  filter(id %in% vars) %>%
-  mutate(id=names(vars)[match(id, vars)]) %>%
+statsp <- stats |>
+  mutate(id=str_c(period, var)) |>
+  filter(id %in% vars) |>
+  mutate(id=names(vars)[match(id, vars)]) |>
   mutate(id=factor(id, levels=names(vars)))
 
 
