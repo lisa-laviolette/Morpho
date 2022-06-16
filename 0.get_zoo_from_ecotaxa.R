@@ -123,7 +123,8 @@ zoo <- zoo |> filter(
     # incomplete
     !str_detect(taxon, "^part"), !str_detect(taxon, "^trunk"),
     !str_detect(taxon, "^head"), !str_detect(taxon, "^tail"),
-    !str_detect(taxon, "^scale"), !str_detect(taxon, "^nucleus"),
+    !str_detect(taxon, "^scale"),
+    !str_detect(taxon, "^nucleus"), !str_detect(taxon, "^endostyle"),
     # representing several individuals
     !str_detect(taxon, "^colony"), !str_detect(taxon, "^chain"),
     !str_detect(taxon, "^multiple"),
