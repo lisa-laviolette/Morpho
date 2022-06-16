@@ -102,7 +102,7 @@ zoo <- select(zoo, -starts_with("comp"))
 
 # remove some  taxa meaningless for morphological analysis
 zoo <- zoo |> filter(
-  # not relevant taxomically
+  # not relevant taxonomically
   !str_detect(lineage, "Hexapoda"),
   !str_detect(taxon, "othertocheck"), !str_detect(taxon, "seaweed"),
   # not sampled quantitatively
