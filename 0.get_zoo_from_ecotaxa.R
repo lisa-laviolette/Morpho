@@ -8,8 +8,8 @@
 
 ## Setup ----
 
-library("tidyverse")
-library("furrr")
+suppressMessages(library("tidyverse"))
+suppressMessages(library("furrr"))
 plan(multisession, workers=20)
 
 # remotes::install_github("jiho/ecotaxar")
@@ -21,7 +21,7 @@ library("morphr")
 img_dir <- "~/datasets/pointB_wp2/"
 
 
-message("Download records from EcoTaxa") # ----
+message("Download objects metadata from EcoTaxa") # ----
 
 # connect to EcoTaxa
 db <- db_connect_ecotaxa()
@@ -62,24 +62,28 @@ zoo <- tbl(db, "objects") |>
   # get images
   left_join(
     tbl(db, "images") |>
-      select(objid, img_path=file_name)
+      select(objid, img_path=file_name),
+    by="objid"
   ) |>
   # get info to compute concentration (volume and fractionning rate)
   left_join(
     tbl(db, "samples") |>
       map_names(maps$mappingsample) |>
-      select(sampleid, orig_sampleid=orig_id, tot_vol)
+      select(sampleid, orig_sampleid=orig_id, tot_vol),
+    by="sampleid"
   ) |>
   left_join(
     tbl(db, "acquisitions") |>
       map_names(maps$mappingacq) |>
-      select(acquisid, sub_part)
+      select(acquisid, sub_part),
+    by="acquisid"
   ) |>
   # # get info to compute features in real world measures
   # left_join(
   #   tbl(db, "process") |>
   #     map_names(maps$mappingprocess) |>
-  #     select(processid, particle_pixel_size_mm, img_resolution)
+  #     select(processid, particle_pixel_size_mm, img_resolution),
+  #   by="processid"
   # ) |>
   collect() |>
   # mutate_at(vars(tot_vol, sub_part, particle_pixel_size_mm, img_resolution), as.numeric)
@@ -95,7 +99,7 @@ zoo <- mutate(zoo,
 db_disconnect_ecotaxa(db)
 
 
-message("Cleanup data table") # ----
+message("Cleanup objects table") # ----
 
 # cleanup useless records
 nrow(zoo)
@@ -106,7 +110,8 @@ zoo <- zoo |>
     # not living
     str_detect(lineage, "^living")
   )
-count(zoo, taxon) |> arrange(taxon) |> print(n=200)
+# count(zoo, taxon) |> arrange(taxon) |> print(n=200)
+
 zoo <- zoo |> filter(
     # remove some  taxa meaningless for morphological analysis
     # not relevant for plankton studies
@@ -207,7 +212,7 @@ ok <- future_walk2(
 )
 
 
-## Save data ----
+message("Save objects to disk") # ----
 
 zoo |>
   select(-source_img, -img_path) |>
