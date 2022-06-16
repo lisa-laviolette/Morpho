@@ -89,10 +89,32 @@ zoo <- zoo |>
   filter(
     # not validated
     classif_qual == "V",
-    # or living
+    # not living
     str_detect(lineage, "^living")
   )
+count(zoo, taxon) |> arrange(taxon) |> print(n=200)
+zoo <- zoo |> filter(
+    # remove some  taxa meaningless for morphological analysis
+    # not relevant for plankton studies
+    !str_detect(lineage, "Hexapoda"),
+    !str_detect(taxon, "seaweed"),
+    !str_detect(taxon, "othertocheck"),
+    # not sampled quantitatively
+    !str_detect(lineage, "Trachymedusae"),
+    # incomplete
+    !str_detect(taxon, "^part"), !str_detect(taxon, "^trunk"),
+    !str_detect(taxon, "^head"), !str_detect(taxon, "^tail"),
+    !str_detect(taxon, "^scale"), !str_detect(taxon, "^nucleus"),
+    # representing several individuals
+    !str_detect(taxon, "^colony"), !str_detect(taxon, "^chain"),
+    !str_detect(taxon, "^multiple"),
+    # not necessarily holoplankton
+    !str_detect(taxon, "^egg"),
+    # badly imaged
+    !str_detect(taxon, "^badfocus")
+  )
 nrow(zoo)
+
 
 zoo <- zoo |>
   # useless columns
@@ -109,20 +131,6 @@ zoo <- zoo |>
 sds <- summarise_if(zoo, is.numeric, sd)
 sds[which(sds == 0)]
 zoo <- select(zoo, -starts_with("comp"))
-
-# remove some  taxa meaningless for morphological analysis
-zoo <- zoo |> filter(
-  # not relevant taxonomically
-  !str_detect(lineage, "Hexapoda"),
-  !str_detect(taxon, "othertocheck"), !str_detect(taxon, "seaweed"),
-  # not sampled quantitatively
-  !str_detect(lineage, "Trachymedusae"),
-  # incomplete
-  !str_detect(taxon, "part$"), !str_detect(taxon, "multiple$"),
-  !str_detect(taxon, "head$"), !str_detect(taxon, "tail$"),
-  !str_detect(taxon, "colony$"),
-  !str_detect(taxon, "egg$")
-)
 
 # compute individual "concentration"
 zoo <- mutate(zoo, conc = 1 * sub_part / tot_vol) |>
