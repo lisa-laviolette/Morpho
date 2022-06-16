@@ -1,16 +1,21 @@
 #
-# Check data extracted from EcoTaxa and add associated metadata
+# Extracted labels, images and metadata from EcoTaxa
 #
 # (c) 2018 GNU General Public License v3
 #     Jean-Olivier Irisson, irisson@normalesup.org
 
+
+## Setup ----
+
 library("tidyverse")
-# install_github("jiho/ecotaxar")
+# remotes::install_github("jiho/ecotaxar")
 library("ecotaxar")
+
+
+message("Download records from EcoTaxa") # ----
 
 # connect to EcoTaxa
 db <- db_connect_ecotaxa()
-
 
 # list PtB WP2 project
 proj_ids <- ids <- c(292, 293, 294, 295, 297, 300, 301, 302, 303, 304, 337)
@@ -72,6 +77,10 @@ zoo <- mutate(zoo,
   taxon = taxo_name(classif_id, taxo, unique=TRUE),
   lineage = lineage(classif_id, taxo)
 )
+
+
+
+message("Cleanup data table") # ----
 
 # cleanup useless records
 nrow(zoo)
