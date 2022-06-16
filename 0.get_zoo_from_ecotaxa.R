@@ -16,14 +16,14 @@ db <- db_connect_ecotaxa()
 proj_ids <- ids <- c(292, 293, 294, 295, 297, 300, 301, 302, 303, 304, 337)
 
 # # check that all samples are fully validated
-# objects |>
+# tbl(db, "objects") |>
 #   filter(projid %in% proj_ids) |>
 #   group_by(sampleid) |> summarise(percent_valid=count(classif_qual=="V")/n()) |>
 #   filter(percent_valid < 1)
 # # -> OK
 
 # # check zooscan models
-# acqs <- acquisitions |>
+# acqs <- tbl(db, "acquisitions") |>
 #   filter(projid %in% proj_ids) |> collect() |>
 #   group_by(projid) |> do({
 #     map <- filter(projs, projid == .$projid[1])$mappingacq
@@ -33,7 +33,7 @@ proj_ids <- ids <- c(292, 293, 294, 295, 297, 300, 301, 302, 303, 304, 337)
 # count(acqs, title, software)
 
 # get metadata mappings for each project
-projs <- filter(projects, projid %in% proj_ids) |> collect()
+projs <- filter(tbl(db, "projects"), projid %in% proj_ids) |> collect()
 # check that all mappings are the same
 maps <- projs |> select(starts_with("mapping")) |> distinct()
 # -> only different in process, keep one
