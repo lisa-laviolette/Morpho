@@ -27,7 +27,7 @@ message("Download objects metadata from EcoTaxa") # ----
 db <- db_connect_ecotaxa()
 
 # list PtB WP2 project
-proj_ids <- ids <- c(292, 293, 294, 295, 297, 300, 301, 302, 303, 304, 337)
+proj_ids <- ids <- c(292, 293, 294, 295, 297, 300, 301, 302, 303, 304, 337, 756, 1608, 2710) #added 756, 1608, 2710 (2018/2019/2020); (2021: 32% validated)
 
 # # check that all samples are fully validated
 # tbl(db, "objects") |>
@@ -102,7 +102,7 @@ db_disconnect_ecotaxa(db)
 message("Cleanup objects table") # ----
 
 # cleanup useless records
-nrow(zoo)
+nrow(zoo) #1410757
 zoo <- zoo |>
   filter(
     # not validated
@@ -133,7 +133,7 @@ zoo <- zoo |> filter(
     # badly imaged
     !str_detect(taxon, "^badfocus")
   )
-nrow(zoo)
+nrow(zoo) #692615, with 2018/2019: 888334
 
 
 zoo <- zoo |>
@@ -161,6 +161,9 @@ zoo <- select(zoo, date, taxon, lineage, conc, everything())
 
 
 message("Download images from EcoTaxa") # ----
+
+# remove objects for which the image seems corrupted
+zoo <- filter(zoo, ! objid %in% c(78785686, 34834712))
 
 # define the location of images
 orig_img_dir <- str_c(img_dir, "orig")
@@ -204,6 +207,7 @@ message("  crop ", nrow(zoo_to_crop), " original images")
 ok <- future_walk2(
   .x=zoo_to_crop$orig_img, .y=zoo_to_crop$cropped_img,
   function(x, y) {
+    message(x)
     img_read(x) |>
       # remove legend
       img_chop(b=31) |>

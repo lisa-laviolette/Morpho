@@ -13,7 +13,10 @@ library("FactoMineR")
 # devtools::install_github("jiho/morphr")
 library("morphr")
 
-load("1.Rdata")
+load("1_incl2020.Rdata")
+
+#filter only Copepoda for coponly analysis
+#z<- z |> filter(taxon=="Copepoda")
 
 ## Compute PCA and plot result ----
 
@@ -26,21 +29,45 @@ pcaw <- PCA(
 # plot variables
 plot(pcaw, choix="var", cex=0.5)
 dev.print(pdf, "plots/pca_axes12.pdf", width=8, height=6)
-plot(pcaw, choix="var", cex=0.5, axes=3:4)
-dev.print(pdf, "plots/pca_axes34.pdf", width=8, height=6)
+plot(pcaw, choix="var", cex=0.5, axes=4:5)
+dev.print(pdf, "plots/pca_axes45_anc.pdf", width=8, height=6)
 # -> Interpretation
 # Axis 1: circular vs. large
 # Axis 2: variable in grey level vs. light
 # Axis 3: elongated and symetric vs. complex perimeter
 # Axis 4: more difficult but circular vs. complex perimeter and symetric
 
+#Coloured plot
+library(factoextra)
+fviz_screeplot(pcaw, addlabels = TRUE, ylim = c(0, 50)) #visualizes % of explained var of the axes
+cols<-read_csv2("data/traitdescriptors.csv")
+cols<- as.data.frame(cols)
+
+pca_coor<-as.data.frame(pcaw$var$coord)
+pca_coor$name2<- rownames(pca_coor)
+pca_coor<-left_join(pca_coor, cols, by=c("name2"="name2"))
+
+fviz_pca_var(pcaw, axes=c(3,4),#, col.var="contrib",
+             #gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             #repel = TRUE, # Avoid text overlapping,
+             habillage = factor(pca_coor$trait2),
+             labelsize=5,
+             palette = c("black", "lightblue", "royalblue", "tomato")  #"simpsons"
+             ) +
+  labs(title="(Coponly)") +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12))
+dev.print(pdf, "plots/pca_colvars_ax34_incl2020_coponly.pdf", width=8, height=6)
+ggsave(p, filename="plots/pca_colvars_ax34_incl2020.png", width=10, height=10)
+
+
 # check distribution of some variables in taxa
-z %>% group_by(taxon) %>% summarise(
+z |>group_by(taxon) |> summarise(
   cv=mean(cv),
   mean=mean(mean),
   area=mean(area),
   major=mean(major)
-) %>% arrange(mean)
+) |> arrange(mean)
 
 
 # plot individuals
@@ -61,18 +88,19 @@ plot(Dim.2 ~ Dim.1, data=pcaw$ind$coord, pch=".", asp=1, col=factor(z$taxon))
 # add coordinates in morphological space to zooplankton data
 z <- bind_cols(z, as.tibble(pcaw$ind$coord[,1:4]))
 # save to disk
-save(z, file="3.Rdata")
+save(z, file="3_incl2020_coponly.Rdata")
 
 ## Represent space ----
 
 z <- mutate(z,
+  #path=paste0("/home/datasets/pointB_wp2/cropped/",objid,".jpg"), ###To Fix
   path=paste0("/home/jiho/ecotaxa_ml-raw/zooscanPtBWP2/imgs/",objid,".jpg"), ###To Fix
   exists=file.exists(path)
 )
 
 zz <- filter(z, exists)
-pcaw <- morpho_space(
-  zz %>% select(area:perimmajor),
+pcaw <- morphospace( #morpho_space or morphospace!?
+  zz |>select(area:perimmajor),
   w=zz$conc/sum(zz$conc)
 )
 p <- ggmorph_tile(pcaw, imgs=zz$path, steps=13, scale=0.005, dimensions=c(1,2))
@@ -138,7 +166,7 @@ set.seed(1)
 obj12 <- list()
 
 # get objects in the middle
-im <- apply(x, 2, middle) %>% subset_n()
+im <- apply(x, 2, middle) |> subset_n()
 obj12[[1]] <- x[im,c(1:2,6)]
 
 # get objects at the extremes, rotating the space so as to extract extreme objects in various directions
@@ -149,8 +177,8 @@ for (i in 2:length(directions)) {
   xx <- x
   xx[,1:2] <- rotate(x[,1:2], theta)
   # get elements at the top extreme of the horizontal axis
-  ix <- cbind(top(xx[,1], p=0.05), apply(xx[,-1], 2, middle, p=0.35)) %>% subset_n()
-  # ix <- cbind(top(xx[,1], p=0.02), top(rowSums(cos2[,1:2]), p=0.02)) %>% subset_n()
+  ix <- cbind(top(xx[,1], p=0.05), apply(xx[,-1], 2, middle, p=0.35)) |> subset_n()
+  # ix <- cbind(top(xx[,1], p=0.02), top(rowSums(cos2[,1:2]), p=0.02)) |>subset_n()
   # NB: selecting through cos2 is not restrictive enough
   obj12[[i]] <- x[ix,c(1:2,6)]
 }
@@ -160,7 +188,7 @@ for (i in 2:length(directions)) {
 obj34 <- list()
 
 # get objects in the middle
-# im <- apply(x, 2, middle) %>% subset_n()
+# im <- apply(x, 2, middle) |> subset_n()
 obj34[[1]] <- x[im,c(3:4,6)]
 
 # get objects at the extremes, rotating the space so as to extract extreme objects in various directions
@@ -171,8 +199,8 @@ for (i in 2:length(directions)) {
   xx <- x
   xx[,3:4] <- rotate(x[,3:4], theta)
   # get elements at the top extreme of the horizontal axis
-  ix <- cbind(top(xx[,3], p=0.05), apply(xx[,-3], 2, middle, p=0.4)) %>% subset_n()
-  # ix <- cbind(top(xx[,3], p=0.05), top(rowSums(cos2[,3:4]), p=0.05)) %>% subset_n()
+  ix <- cbind(top(xx[,3], p=0.05), apply(xx[,-3], 2, middle, p=0.4)) |>subset_n()
+  # ix <- cbind(top(xx[,3], p=0.05), top(rowSums(cos2[,3:4]), p=0.05)) |> subset_n()
   obj34[[i]] <- x[ix,c(3:4,6)]
 }
 

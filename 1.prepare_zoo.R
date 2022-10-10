@@ -12,17 +12,33 @@ source("lib_plot.R")
 
 ## Simplify taxonomy ----
 
-z <- read_csv("data/zoo.csv.gz", col_types=cols())
+z <- read_csv("data/zoo_incl2020.csv.gz", col_types=cols()) #"..._woimg" ending for current files, in case image extraction changes anything (also for "taxo_grouped file below)
 
-# # make a list of available taxa
-# z |> group_by(lineage, taxon) |> summarise(n=n(), conc=sum(conc)) |> write_tsv("data/taxo.tsv")
+#manually correct wrong date (2017-07-17-> 2018-07-17)
+z<- z |> mutate(date = case_when(date(date) == "2017-07-17" ~ `year<-`(date, 2018),
+                                TRUE ~ date))
 
-# read the groupings
-taxo <- read_csv("data/taxo_grouped - Sheet1.csv", col_types=cols()) |>
+# make a list of available taxa
+taxo_base <- z |>
+  group_by(lineage, taxon) |>
+  summarise(n=n(), conc=sum(conc)) |>
+  write_tsv("data/taxo_base_incl2020.tsv")
+
+# read the current state of the taxonomic groupings
+taxo_grouped <- read_csv("data/taxo_grouped - Sheet1_woimg.csv", col_types=cols()) |>
+  select(lineage, level1) |>
+  right_join(taxo_base, by="lineage") |>
+  relocate(level1, .after=everything()) |>
+  write_tsv("data/taxo_grouped2_incl2020.tsv")
+
+# Now open taxo_grouped.tsv, copy paste it in the Google Sheet and proceed
+# to the manual grouping at level1. Once this is finished, export as .csv and:
+
+taxo_grouped <- read_csv("data/taxo_grouped - Sheet1_woimg.csv", col_types=cols()) |>
   select(taxon, level1)
 
 # replace taxon by the grouping
-z <- left_join(z, taxo, by="taxon") |>
+z <- left_join(z, taxo_grouped, by="taxon") |>
   select(-taxon, taxon=level1) |>
   select(date, taxon, lineage, conc, objid, everything()) |>
   # remove extra taxa (which were marked as NA) = mistakes etc.
@@ -69,7 +85,7 @@ effort_s <- zs |> group_by(date) |> summarise(n=n(), conc=sum(conc))
 ggplot(mapping=aes(date, conc)) +
   geom_path(data=effort, colour="black") +
   geom_path(data=effort_s, colour="red") +
-  date_x + scale_y_continuous(trans="sqrt")
+  scale_y_continuous(trans="sqrt")
 # -> the total matches of course, because we corrected
 
 # per group
@@ -78,11 +94,11 @@ effort_s <- zs |> group_by(date, taxon) |> summarise(n=n(), conc=sum(conc))
 ggplot(mapping=aes(date, conc)) +
   geom_path(data=filter(effort, taxon=="Copepoda"), colour="black") +
   geom_path(data=filter(effort_s, taxon=="Copepoda"), colour="red") +
-  date_x + scale_y_continuous(trans="sqrt")
+  scale_y_continuous(trans="sqrt")
 ggplot(mapping=aes(date, conc)) +
   geom_path(data=filter(effort, taxon=="Annelida"), colour="black") +
   geom_path(data=filter(effort_s, taxon=="Annelida"), colour="red") +
-  date_x + scale_y_continuous(trans="sqrt")
+  scale_y_continuous(trans="sqrt")
 # -> matches fairly well even for kind of rare taxa
 
 
@@ -167,12 +183,14 @@ zt <- z |> mutate(
 #   ggplot() + geom_histogram(aes(x=val), bins=50) + facet_wrap(~var, scales="free")
 # ggsave(p, "plots/histograms_of_features_normalised.pdf", width=20, height=10)
 
-# eliminate extreme inviduals
+# eliminate extreme indviduals
 # = more than 5 features are NA
 n_na <- select(zt, area:perimmajor) |> apply(1, function(x) {sum(is.na(x))})
 zt <- zt[n_na<=5,]
 
 # replace NAs by the mean of the column
+sum(!complete.cases(zt)) #count number of ind with missing values
+
 for (col in names(select(zt, area:perimmajor))) {
   zt[[col]][is.na(zt[[col]])] <- mean(zt[[col]], na.rm=TRUE)
 }
@@ -182,10 +200,10 @@ for (col in names(select(zt, area:perimmajor))) {
 z <- zt
 
 nrow(z)
-# [1] 587059
+# [1] 587059 #587061(when Miriam re-tried the first time) -> with updated years 2018/2019 (&_woimg) 784104 -> incl 2020: 845812
 
 ncol(select(z, area:perimmajor))
 # [1] 45
 
 # save to disk
-save(z, file="1.Rdata")
+save(z, file="1_incl2020.Rdata")

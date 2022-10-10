@@ -12,7 +12,7 @@ library("lubridate")
 library("castr")
 
 # read data
-env <- read_csv("data/radehydro_std.csv", col_types=cols(), guess_max=100000) |>
+env <- read_csv("data/radehydro_ctd.csv", col_types=cols(), guess_max=100000) |>
   mutate(date=as.Date(date_time))
 
 # eliminate data with bad qc
@@ -32,8 +32,10 @@ ph <- read_csv("data/radehydro_pH.csv", col_types=cols()) |>
   select(date, depth, pH, pCO2) |>
   # reduce replicates
   group_by(date, depth) |> summarise_all(mean, na.rm=T) |> ungroup() |>
+  #filter updated PH data to then only bind new data
+  filter(date > "2017-07-25")  |>
   # convert to tall format
-  gather(key="var", value="val", pH, pCO2)
+  gather(key="var", value="val", pH, pCO2) |>
 # add it to the rest
 env <- bind_rows(env, ph)
 
@@ -41,7 +43,7 @@ env <- bind_rows(env, ph)
 # subsample data
 env <- env |>
   # keep only some years
-  filter(date >= "2000-01-01", date < "2018-01-01") |>
+  filter(date >= "2000-01-01", date < "2020-01-01") |> #changed to updates data 2018/2019
   # and some variables
   filter(var %in% c("temperature", "salinity", "sigma_theta", "fluorescence", "oxygen_winkler", "no3", "no2", "po4", "sioh4", "poc", "pon", "chla", "pH", "pCO2"))
 
@@ -76,4 +78,4 @@ envi <- gather(envi, key=var, value=val, -date)
 ggplot(envi) + geom_path(aes(date, val), na.rm=T) + facet_wrap(~var, scales="free_y")
 
 e <- envi
-save(e, file="2.Rdata")
+save(e, file="2_woimg.Rdata")
