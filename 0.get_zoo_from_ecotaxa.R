@@ -75,7 +75,7 @@ zoo <- tbl(db, "objects") |>
   left_join(
     tbl(db, "acquisitions") |>
       map_names(maps$mappingacq) |>
-      select(acquisid, sub_part),
+      select(acquisid, sub_part, scan_date),
     by="acquisid"
   ) |>
   # # get info to compute features in real world measures
@@ -85,9 +85,13 @@ zoo <- tbl(db, "objects") |>
   #     select(processid, particle_pixel_size_mm, img_resolution),
   #   by="processid"
   # ) |>
-  collect() |>
+  collect()
+
+# reformat some columns
+zoo <- zoo |>
   # mutate_at(vars(tot_vol, sub_part, particle_pixel_size_mm, img_resolution), as.numeric)
-  mutate_at(vars(tot_vol, sub_part), as.numeric)
+  mutate_at(vars(tot_vol, sub_part), as.numeric) |>
+  mutate(scan_date = scan_date |> na_if("nan") |> parse_date("%Y%m%d"))
 
 # get taxonomic classification
 taxo <- tbl(db, "taxonomy") |> collect()

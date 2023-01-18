@@ -46,6 +46,19 @@ z <- left_join(z, taxo_grouped, by="taxon") |>
 # compute total concentration per taxon
 z |> group_by(taxon) |> summarise(conc=sum(conc)) |> arrange(conc)
 
+## Check scan date vs sampling date ----
+
+distinct(z, date, scan_date) |>
+  mutate(
+    scan_delay=difftime(scan_date, date, units="days") |> as.numeric(),
+    sample_year=lubridate::year(date)
+  ) |>
+  group_by(sample_year) |>
+  summarise(
+    mean = mean(scan_delay, na.rm=TRUE),
+    med  = median(scan_delay, na.rm=TRUE),
+    q75  = quantile(scan_delay, probs=0.75, na.rm=TRUE)
+  )
 
 ## Subsample organisms to correct for sampling effort ----
 
