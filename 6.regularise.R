@@ -50,44 +50,6 @@ ef <- e |>
 ggplot(gather(er, var, val, -date)) + geom_path(aes(date, val), na.rm=T) + facet_wrap(~var, scales="free_y")
 ggplot(gather(ef, var, val, -date)) + geom_path(aes(date, val), na.rm=T) + facet_wrap(~var, scales="free_y")
 
-#combind filling for NA data (for now manually)
-gaps<- er |>
-  rename_all(list(~paste0(., ".gapID"))) |>
-  rename(date = date.gapID) |>
-  arrange(date) |>
-  mutate(across(c(chla.gapID:temperature.gapID), ~ data.table::rleid(is.na(.x)))) |>
-  left_join(ef, by="date") |>
-  left_join(er, by="date")
-
-#chla, density, fluo, no2, no3, oxygen, po4, poc, pon, salinity, sioh4, temperature
-gaps2<- gaps |>  filter(is.na(chla.y)) |>
-  count(chla.gapID, name = "gapsize") |>
-  mutate(todo=case_when(gapsize <=4 ~ "fill",
-                        gapsize > 4 ~"leaveNA"))
-gapsNA.chla<- gaps2$chla.gapID[gaps2$todo=="leaveNA"]
-
-ecomb<- gaps |>
-  mutate(chla = ifelse(chla.gapID %in% gapsNA.chla, chla.y, chla.x),
-         density = ifelse(density.gapID %in% gapsNA.density, density.y, density.x),
-         fluo = ifelse(fluo.gapID %in% gapsNA.fluo, fluo.y, fluo.x),
-         no2 = ifelse(no2.gapID %in% gapsNA.no2, no2.y, no2.x),
-         no3 = ifelse(no3.gapID %in% gapsNA.no3, no3.y, no3.x),
-         oxygen = ifelse(oxygen.gapID %in% gapsNA.oxygen, oxygen.y, oxygen.x),
-         po4 = ifelse(po4.gapID %in% gapsNA.po4, po4.y, po4.x),
-         poc = ifelse(poc.gapID %in% gapsNA.poc, poc.y, poc.x),
-         pon = ifelse(pon.gapID %in% gapsNA.pon, pon.y, pon.x),
-         salinity = ifelse(salinity.gapID %in% gapsNA.salinity, salinity.y, salinity.x),
-         sioh4 = ifelse(sioh4.gapID %in% gapsNA.sioh4, sioh4.y, sioh4.x),
-         temperature = ifelse(temperature.gapID %in% gapsNA.temperature, temperature.y, temperature.x)
-  ) |>
-  arrange(date) |>
-  select(date, chla, density, fluo, no2, no3, oxygen, po4, poc, pon, salinity, sioh4, temperature)
-
-
-ggplot(gather(er, var, val, -date)) + geom_path(aes(date, val), na.rm=T) + facet_wrap(~var, scales="free_y")
-ggplot(gather(ef, var, val, -date)) + geom_path(aes(date, val), na.rm=T) + facet_wrap(~var, scales="free_y")
-ggplot(gather(ecomb, var, val, -date)) + geom_path(aes(date, val), na.rm=T) + facet_wrap(~var, scales="free_y")
-
 
 ## Regularise zooplankton data ----
 
@@ -124,9 +86,8 @@ df <- gather(d, key="var", val="val", -date) |>
   ungroup() |>
   spread(key="var", val="val")
 
-########
-#check size of NA gabs and fill those that are small (1, 2 weeks); leave others NA (obtion used in manuscript)
 
+# 3. check size of NA gabs and fill those that are small (1, 2 weeks); leave others NA (option used in manuscript)
 gaps<- df |>
   #mutate(week= rep(1:52, 11),
   #       year= year(gaps$date)) |>
@@ -181,8 +142,5 @@ ggplot(gather(df, var, val, -date)) + geom_path(aes(date, val), na.rm=T) + facet
 ggplot(gather(dcomb, var, val, -date)) + geom_path(aes(date, val), na.rm=T) + facet_wrap(~var, scales="free_y")
 
 ## Combine and save ----
-df <- left_join(df, ef)
-dcomb<-left_join(dcomb, ef)
-dcomb2<-left_join(dcomb, ecomb, by="date")
-dr<- left_join(dr, ef)
-save(dr, df, dcomb, er, ef, ecomb, file="6_incl2020.Rdata")
+dcomb<-left_join(dcomb, ef) #or decide which option to take
+save(dr, df, dcomb, er, ef, file="6_incl2020.Rdata")

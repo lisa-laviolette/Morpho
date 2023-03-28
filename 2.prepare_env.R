@@ -45,11 +45,11 @@ env <- env |>
   # keep only some years
   filter(date >= "2000-01-01", date < "2020-01-01") |> #changed to updates data 2018/2019
   # and some variables
-  filter(var %in% c("temperature", "salinity", "sigma_theta", "fluorescence", "oxygen_winkler", "no3", "no2", "po4", "sioh4", "poc", "pon", "chla", "pH", "pCO2"))
+  filter(var %in% c("temperature", "salinity", "sigma_theta", "oxygen_winkler", "no3", "no2", "po4", "sioh4", "poc", "pon", "chla", "pH", "pCO2"))
 
 # change some variable names for simplicity
 env <- spread(env, var, val) |>
-  rename(density=sigma_theta, oxygen=oxygen_winkler, fluo=fluorescence) |>
+  rename(density=sigma_theta, oxygen=oxygen_winkler) |>
   gather(var, val, -date, -depth)
 
 # cleanup some values
@@ -78,4 +78,4 @@ envi <- gather(envi, key=var, value=val, -date)
 ggplot(envi) + geom_path(aes(date, val), na.rm=T) + facet_wrap(~var, scales="free_y")
 
 e <- envi
-save(e, file="2_woimg.Rdata")
+save(e, file="2_incl2020.Rdata")

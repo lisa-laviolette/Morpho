@@ -62,7 +62,7 @@ d <- mutate(d,
   TRic = specnumber(comm),
   TShannon = diversity(comm, index="shannon"),
   TPielou = TShannon / log(TRic)
-)
+  )
 
 
 ## Inspect indexes ----
@@ -84,15 +84,6 @@ ggplot() +
   theme(axis.title.y=element_blank()) +
   #x_year +
   facet_grid(index~., scales="free_y")
-d |> rename(Richness=MRic, Divergence=MDiv, Evenness=MEve) |>
-  gather(key="index", val="val", Richness:Evenness) |>
-  mutate(index=factor(index, levels=unique(index))) |>
-ggplot() +
-  geom_path(aes(x=date, y=val)) +
-  theme(axis.title.y=element_blank()) +
-  #x_year +
-  ggtitle("Copopods only") +
-  facet_grid(index~., scales="free_y")
 ggsave("plots/morpho_indexes_series_incl2020_coponly.pdf", width=8, height=5)
 
 
@@ -101,53 +92,21 @@ ggplot(d) +
   geom_point(aes(x=TRic/max(TRic), y=MRic), alpha=0.5, shape=16) +
   geom_abline(slope=1, intercept=0)
 cor.test(d$TRic, d$MRic, method="spearman")
-# S = 6297800, p-value < 2.2e-16 (update 2018/2019 woimg: S = 6877685, p-value < 2.2e-16)
-# alternative hypothesis: true rho is not equal to 0
-# sample estimates:
-#       rho
-# 0.5623991 (update 2018/2019 woimg: 0.7212415)
 
 ggplot(d) +
   geom_point(aes(x=TShannon, y=MDiv), alpha=0.5, shape=16) +
   geom_abline(slope=1, intercept=0)
 cor.test(d$TShannon, d$MDiv, method="spearman")
-# S = 5733300, p-value < 2.2e-16
-# alternative hypothesis: true rho is not equal to 0
-# sample estimates:
-#       rho
-# 0.6016251 (update 2018/2919; incl 2020: 0.7327886)
 
 ggplot(d) +
   geom_point(aes(x=TPielou, y=MEve), alpha=0.5, shape=16) +
   geom_abline(slope=1, intercept=0)
 cor.test(d$TPielou, d$MEve, method="spearman")
-# S = 5689100, p-value < 2.2e-16 (update 2018/2019 woimg S = 10427060, p-value < 2.2e-16)
-# alternative hypothesis: true rho is not equal to 0
-# sample estimates:
-#       rho
-# 0.6046965 (update 2018/2019: 0.5773823; incl 2020: 0.6240378)
 
-#add mean coordinates along PCA axes to df
-ax<- z |> group_by(date) |> summarise_at(vars(Dim.1:Dim.4), funs(mean, sd, quantile(., 0.25), quantile(., 0.75))) #z as resulted from 3; load("3_incl2020.Rdata")
+
+#add also mean coordinates along PCA axes to df
+ax<- z |> group_by(date) |> summarise_at(vars(Dim.1:Dim.4), funs(mean, sd, quantile(., 0.25), quantile(., 0.75)))
 colnames(ax)<-c("date", "Dim.1_mean", "Dim.2_mean", "Dim.3_mean", "Dim.4_mean", "Dim.1_sd", "Dim.2_sd", "Dim.3_sd", "Dim.4_sd", "Dim.1_q25", "Dim.2_q25", "Dim.3_q25", "Dim.4_q25", "Dim.1_q75", "Dim.2_q75", "Dim.3_q75", "Dim.4_q75")
 d<- left_join(d, ax, by="date")
 
 save(d, file="5_incl2020_coponly.Rdata")
-
-# TODO: review this
-# #### II. Graphics of each morphological space ####
-# tab$mois <- month(tab$date, label=T)
-# tab$semaine <- week(tab$date)
-# D_index$date <- as.Date(rownames(D_index))
-#
-# date <- D_index$date
-# date <- as.character(date)
-# for (i in 1:length(date)){
-#   a <- date[i]
-#   plotFD2(weight=weight_mat, Serie=D_index$date, Ric=D_index$FRic, Div=D_index$FDiv, Eve=D_index$FEve, date=a, mois=tab$mois, semaine=tab$semaine, coord=centers, Faxes_plot=colnames(centers)[1:5], abond=T)
-#   a
-# }
-#
-# # Creating a graph to represent morphological richness and functionnal space for each axis for two date
-# plotFD3(weight=weight_mat, Serie=D_index$date, Ric=D_index$FRic, Div=D_index$FDiv, Eve=D_index$FEve, date="2012-02-22", date2="2012-03-21", mois=tab$mois, semaine=tab$semaine, coord=centers, Faxes_plot=colnames(centers)[1:5], abond=T)
-#

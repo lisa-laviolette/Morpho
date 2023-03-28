@@ -12,11 +12,10 @@ source("lib_plot.R")
 
 ## Simplify taxonomy ----
 
-z <- read_csv("data/zoo_incl2020.csv.gz", col_types=cols()) #"..._woimg" ending for current files, in case image extraction changes anything (also for "taxo_grouped file below)
+z <- read_csv("data/zoo_incl2020.csv.gz", col_types=cols())
 
-#manually correct wrong date (2017-07-17-> 2018-07-17)
-z<- z |> mutate(date = case_when(date(date) == "2017-07-17" ~ `year<-`(date, 2018),
-                                TRUE ~ date))
+# manually correct wrong date (2017-07-17-> 2018-07-17)
+z <- z |> mutate(date = if_else(date == "2017-07-17", as.Date("2018-07-17"), date))
 
 # make a list of available taxa
 taxo_base <- z |>
@@ -29,9 +28,9 @@ taxo_grouped <- read_csv("data/taxo_grouped - Sheet1_woimg.csv", col_types=cols(
   select(lineage, level1) |>
   right_join(taxo_base, by="lineage") |>
   relocate(level1, .after=everything()) |>
-  write_tsv("data/taxo_grouped2_incl2020.tsv")
+  write_tsv("data/taxo_grouped2_woimg.tsv")
 
-# Now open taxo_grouped.tsv, copy paste it in the Google Sheet and proceed
+# Now open taxo_grouped2_woimg.tsv, copy paste it in the Google Sheet and proceed
 # to the manual grouping at level1. Once this is finished, export as .csv and:
 
 taxo_grouped <- read_csv("data/taxo_grouped - Sheet1_woimg.csv", col_types=cols()) |>
@@ -139,10 +138,10 @@ trim <- function(x, p=0.001, side="right") {
   return(x)
 }
 
-# # plot all histograms
-# p <- gather(sample_frac(z, 0.1), key="var", val="val", area:perimmajor) |>
-#   ggplot() + geom_histogram(aes(x=val), bins=50) + facet_wrap(~var, scales="free")
-# ggsave(p, "plots/histograms_of_features.pdf", width=20, height=10)
+# plot all histograms
+p <- gather(sample_frac(z, 0.1), key="var", val="val", area:perimmajor) |>
+  ggplot() + geom_histogram(aes(x=val), bins=50) + facet_wrap(~var, scales="free")
+ggsave(p, "plots/histograms_of_features.pdf", width=20, height=10)
 
 # transform features to look more normal
 zt <- z |> mutate(
@@ -191,10 +190,10 @@ zt <- z |> mutate(
   perimmajor = log10(trim(perimmajor))
 )
 
-# # plot all histograms
-# p <- gather(sample_frac(z, 0.2), key="var", val="val", area:perimmajor) |>
-#   ggplot() + geom_histogram(aes(x=val), bins=50) + facet_wrap(~var, scales="free")
-# ggsave(p, "plots/histograms_of_features_normalised.pdf", width=20, height=10)
+# plot all histograms
+p <- gather(sample_frac(z, 0.2), key="var", val="val", area:perimmajor) |>
+  ggplot() + geom_histogram(aes(x=val), bins=50) + facet_wrap(~var, scales="free")
+ggsave(p, "plots/histograms_of_features_normalised.pdf", width=20, height=10)
 
 # eliminate extreme indviduals
 # = more than 5 features are NA
@@ -202,8 +201,6 @@ n_na <- select(zt, area:perimmajor) |> apply(1, function(x) {sum(is.na(x))})
 zt <- zt[n_na<=5,]
 
 # replace NAs by the mean of the column
-sum(!complete.cases(zt)) #count number of ind with missing values
-
 for (col in names(select(zt, area:perimmajor))) {
   zt[[col]][is.na(zt[[col]])] <- mean(zt[[col]], na.rm=TRUE)
 }
@@ -211,12 +208,6 @@ for (col in names(select(zt, area:perimmajor))) {
 ## Define characteristics of the zooplankton data set ----
 
 z <- zt
-
-nrow(z)
-# [1] 587059 #587061(when Miriam re-tried the first time) -> with updated years 2018/2019 (&_woimg) 784104 -> incl 2020: 845812
-
-ncol(select(z, area:perimmajor))
-# [1] 45
 
 # save to disk
 save(z, file="1_incl2020.Rdata")

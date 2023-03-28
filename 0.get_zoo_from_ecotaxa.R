@@ -27,7 +27,7 @@ message("Download objects metadata from EcoTaxa") # ----
 db <- db_connect_ecotaxa()
 
 # list PtB WP2 project
-proj_ids <- ids <- c(292, 293, 294, 295, 297, 300, 301, 302, 303, 304, 337, 756, 1608, 2710) #added 756, 1608, 2710 (2018/2019/2020); (2021: 32% validated)
+proj_ids <- ids <- c(292, 293, 294, 295, 297, 300, 301, 302, 303, 304, 337, 756, 1608, 2710)
 
 # # check that all samples are fully validated
 # tbl(db, "objects") |>
@@ -137,7 +137,7 @@ zoo <- zoo |> filter(
     # badly imaged
     !str_detect(taxon, "^badfocus")
   )
-nrow(zoo) #692615, with 2018/2019: 888334
+nrow(zoo)
 
 
 zoo <- zoo |>
@@ -223,13 +223,9 @@ ok <- future_walk2(
   .progress=TRUE
 )
 
-
 message("Save objects to disk") # ----
 
 zoo |>
   select(-source_img, -img_path) |>
   write_csv("data/zoo.csv.gz")
 # save(zoo, file="0.Rdata")
-
-
-
