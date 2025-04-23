@@ -1,17 +1,19 @@
 #
 # Detect trends in environmental data
-#
+## OBJECTIF : Identifier et quantifier les tendances temporelles dans les
+#            séries environnementales et de diversité du zooplancton
 # (c) 2018 Jean-Olivier Irisson, GNU General Public License v3
 
 library("tidyverse")
-library("trend")
-library("nlme")
-library("broom")
+library("trend") # Pour le test de Mann-Kendall
+library("nlme") # Pour la régression linéaire généralisée (GLS)
+library("broom") #Pour extraire les statistiques des modèles
+
 
 load("7_incl2020.Rdata")
+## FONCTIONS UTILES ----
 
-## Utilities ----
-
+# Extraire les stats utiles d’un modèle GLS
 glance.gls <- function(m) {
   s <- summary(m)
 
@@ -45,7 +47,7 @@ glance.gls <- function(m) {
     acf2 = a$acf[2]
   )
 }
-
+# Convertir une p-value en étoiles de significativité
 signif_stars <- function(x) {
   case_when(
     x < 0.001 ~ "***",
@@ -56,17 +58,18 @@ signif_stars <- function(x) {
   )
 }
 
-## Test trends ----
+## ANALYSE DES TENDANCES ----
 # combine the two periods
 es$period <- "2000-"
 ds$period <- "2009-"
 
-s <- bind_rows(es, ds)
+s <- bind_rows(es, ds) # Fusion des deux sources
 s$var <- factor(s$var, levels=levels(ds$var))
 
-# compute the deseasonalised part
+# Recalcul de la série désaisonnalisée
 s <- mutate(s, deseason = trend+ifelse(is.na(remainder), 0, remainder))
 
+# Calcul statistique pour chaque variable et période
 # x <- filter(ds, var == "pon")
 stats <- s |> group_by(period, var) |>
   do({
@@ -78,11 +81,14 @@ stats <- s |> group_by(period, var) |>
 
     # 2. GLS regression
     # simple model
-    m <- gls(deseason ~ date, data=x)
+    m <- gls(deseason ~ date, data=x) 
+      # Détection d’autocorrélation significative
+
     a <- pacf(residuals(m, type="normalized"), plot=FALSE)
     # if autocorrelation is too strong
     if (abs(a$acf[1]) > 0.2) {
       # add AR1 model on residuals
+    # Modèle GLS avec erreur AR1
       m <- gls(deseason ~ date, data=x, cor=corAR1(round(a$acf[1], 1)))
       a <- pacf(residuals(m, type="normalized"), plot=FALSE)
       # # if autocorrelation is still too strong
@@ -99,13 +105,13 @@ stats <- s |> group_by(period, var) |>
 
     # extract diagnostic information for both approaches
     bind_cols(
-      glance(mkt) |> select(p.value),
+      glance(mkt) |> select(p.value), # Résultat Mann-Kendall
       glance.gls(m) |> select(r.squared, p.value, intercept, slope, cor.struct, acf=acf1)
      )
   }) |>
   ungroup() |>
   mutate(
-    acf = abs(acf),
+    acf = abs(acf),# force valeur absolue de l’autocorr
     signif.mk = signif_stars(p.value...3),
     signif.gls = signif_stars(p.value...5)
   ) |>
@@ -117,14 +123,16 @@ stats <- s |> group_by(period, var) |>
          cor.struct.gls = cor.struct,
          acf.gls = acf
          )
+# Export des résultats
 
 write_tsv(stats, "plots/stats_periodic_incl2020_ext_coponly.tsv")
 
 ## Plots ----
 
-#variable selection for manuscript:
+# Sélection de variables à illustrer
 vars <- c("Zoo. concentration (ind/L)"="2009-conc", "Temperature (°C)"="2000-temperature", `Morph. Richness`="2009-MRic", "Chl a (μg/L)"="2000-chla", `Morph. Eveness`="2009-MEve", "POC (μg/L)"="2000-poc", `Morph. Divergence`="2009-MDiv", "PON (μg/L)"="2000-pon")
 vars <- c("Concentration (ind/L)"="2009-conc", `Morph. Richness`="2009-MRic", `Morph. Eveness`="2009-MEve", `Morph. Divergence`="2009-MDiv") #coponly SUPP
+# Filtrage des données à tracer
 
 dp <- s |>
   mutate(id=str_c(period, var)) |>
@@ -148,10 +156,11 @@ statsp <- stats |>
 #  filter(id %in% vars2) |>
 #  mutate(id=names(vars2)[match(id, vars2)]) |>
 #  mutate(id=factor(id, levels=names(vars2)))
+# Tracé : série + droite de tendance
 
 ggplot() +
   facet_wrap(id~., scales="free_y", ncol=2) +
-  geom_path(aes(date, deseason), data=dp, colour="grey20") +
+  geom_path(aes(date, deseason), data=dp, colour="grey20") + # série désaisonnalisée
   geom_abline(aes(slope=slope.gls, intercept=intercept.gls), data=subset(statsp, signif.gls %in% c("*", "**", "***")), colour="red", size=0.75, alpha=0.7) +
   #geom_abline(aes(slope=slope.gls, intercept=intercept.gls), data=subset(statsp2, signif.gls %in% c("*", "**", "***")), colour="pink", size=0.75, alpha=0.7) + theme(axis.title.y=element_blank()) + #when plotting 2nd line for recent years
   xlab("Date") +
