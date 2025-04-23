@@ -1,4 +1,5 @@
 ## Explore time series of image features ----
+#Affiche un résumé statistique de l'ensemble des variables : utilité exploratoire.
 
 summary(zs)
 
@@ -7,7 +8,7 @@ desc <- zs %>%
   select(date, area:perimmajor) %>%
   # reshape the data to be able to quickly compute everything per feature
   gather(key=feature, value=value, -date) %>%
-  # compute summary statistic
+  # compute summary statistic 
   group_by(date, feature) %>%
   summarise(
     mean=mean(value,na.rm=TRUE),
