@@ -5,21 +5,23 @@
 #     Jean-Olivier Irisson, irisson@normalesup.org
 
 # NB: Several steps are long; run as job in RStudio.
+ OBJECTIF : Télécharger, nettoyer et préparer les métadonnées et images
+#            de zooplancton pour des analyses morphologiques
 
-## Setup ----
-
-suppressMessages(library("tidyverse"))
-suppressMessages(library("furrr"))
+## CHARGEMENT DES PACKAGES ----
+suppressMessages(library("tidyverse")) # Pour manipulation de données (ggplot2, dplyr, etc.)
+suppressMessages(library("furrr")) # Pour parallélisation avec future + purrr
 plan(multisession, workers=20)
 
 # remotes::install_github("jiho/ecotaxar")
 library("ecotaxar")
 # remotes::install_github("jiho/morphr")
-library("morphr")
+library("morphr") # Fonctions pour analyser l'espace morphologique (PCA, etc.)
 
-# define directory to hold the images (outside of this repo, since they are big)
+# # Répertoire local pour stocker les images(outside of this repo, since they are big)
 img_dir <- "~/datasets/pointB_wp2/"
 
+## ÉTAPE 1 : CONNEXION À ECOTAXA ----
 
 message("Download objects metadata from EcoTaxa") # ----
 
@@ -28,6 +30,8 @@ db <- db_connect_ecotaxa()
 
 # list PtB WP2 project
 proj_ids <- ids <- c(292, 293, 294, 295, 297, 300, 301, 302, 303, 304, 337, 756, 1608, 2710)
+
+## ÉTAPE 2 : HARMONISATION DES MÉTADONNÉES ----
 
 # # check that all samples are fully validated
 # tbl(db, "objects") |>
@@ -116,6 +120,8 @@ zoo <- zoo |>
   )
 # count(zoo, taxon) |> arrange(taxon) |> print(n=200)
 
+## ÉTAPE 3 : EXTRACTION DES OBJETS ----
+
 zoo <- zoo |> filter(
     # remove some  taxa meaningless for morphological analysis
     # not relevant for plankton studies
@@ -175,6 +181,9 @@ dir.create(orig_img_dir, showWarnings=FALSE, recursive=TRUE)
 cropped_img_dir <- str_c(img_dir, "cropped")
 dir.create(cropped_img_dir, showWarnings=FALSE, recursive=TRUE)
 
+## ÉTAPE 4 : FORMATAGE ET TAXONOMIE ----
+
+# Conversion de colonnes en valeurs numériques (volume, fraction)
 zoo <- zoo |>
   mutate(
     source_img=str_c("/remote/ecotaxa/vault/", img_path),
