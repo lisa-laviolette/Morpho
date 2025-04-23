@@ -18,24 +18,24 @@ load("1_incl2020.Rdata")
 #filter only Copepoda for coponly analysis
 #z<- z |> filter(taxon=="Copepoda")
 
-## Compute PCA and plot result ----
+## ÉTAPE 1 : CALCUL DE LA PCA PONDÉRÉE ----
 pcaw <- PCA(
-  select(z, area:perimmajor),
-  row.w=z$conc/sum(z$conc), # NB: weights must be scaled to sum to 1
+  select(z, area:perimmajor), # variables morphologiques
+  row.w=z$conc/sum(z$conc), # NB: weights must be scaled to sum to 1# pondération selon concentration
   graph=FALSE, ncp=5
 )
 
-### Quick plots & overview
+### ÉTAPE 2 : EXPLORATION DES RÉSULTATS ----
 
 # How many axes to keep?
-# Screeplot: visualization of % of explained variance per axis
+# Visualisation de la variance expliquée (screeplot) Screeplot: visualization of % of explained variance per axis
 library(factoextra)
 fviz_screeplot(pcaw, addlabels = TRUE, ylim = c(0, 50))
 
 # Kaiser-Guttman (keep axes with eigenvalues >1)
 pcaw$eig
 
-# plot variables
+# Affichage des contributions des variables aux axes
 plot(pcaw, choix="var", cex=0.5)
 dev.print(pdf, "plots/pca_axes12.pdf", width=8, height=6)
 plot(pcaw, choix="var", cex=0.5, axes=4:5)
@@ -46,7 +46,7 @@ dev.print(pdf, "plots/pca_axes45_anc.pdf", width=8, height=6)
 # Axis 3: elongated and symetric vs. complex perimeter
 # Axis 4: more difficult but circular vs. complex perimeter and symetric
 
-# plot individuals
+# Visualisation des individus dans le plan PCA (axes 1 et 2)
 plot(Dim.2 ~ Dim.1, data=pcaw$ind$coord, pch=".", asp=1)
 
 # color per taxon
@@ -65,11 +65,12 @@ contribs<-data.frame(pcaw$var$contrib); contribs$feature<- rownames(contribs)
 contribs<- contribs %>% mutate(Dim.12 = abs(Dim.1) + abs(Dim.2),
                                Dim.23 = abs(Dim.2) + abs(Dim.3),
                                Dim.34 = abs(Dim.3) + abs(Dim.4))
-
+# Préparation des coordonnées des variables (flèches)
 pca_coor<-as.data.frame(pcaw$var$coord)
 pca_coor$name2<- rownames(pca_coor)
 pca_coor<-left_join(pca_coor, cols[,c(2, 6, 7)], by=c("name2"="name2"))
 
+# Biplot avec flèches colorées selon le type de trait
 fviz_pca_var(pcaw, axes=c(1,2), #change axes here
              select.var = list(name =rownames(contribs[order(contribs$Dim.12, decreasing = TRUE),])[1:12]), #change axes/plane here!
              habillage = factor(pca_coor$trait2),
@@ -84,7 +85,6 @@ fviz_pca_var(pcaw, axes=c(1,2), #change axes here
         axis.text = element_text(size = 12))
 dev.print(pdf, "plots/pca_colvars_ax12.pdf", width=8, height=6)
 
-
 # check distribution of some variables in taxa
 z |>group_by(taxon) |> summarise(
   cv=mean(cv),
@@ -93,6 +93,7 @@ z |>group_by(taxon) |> summarise(
   major=mean(major)) |>
   arrange(mean)
 
+## ÉTAPE 4 : AJOUT DES COORDONNÉES PCA AUX DONNÉES ----
 
 # add coordinates in morphological space to zooplankton data
 z <- bind_cols(z, as.tibble(pcaw$ind$coord[,1:4]))
@@ -100,15 +101,15 @@ z <- bind_cols(z, as.tibble(pcaw$ind$coord[,1:4]))
 # save to disk
 save(z, file="3_incl2020.Rdata")
 
-#______________________________________________
+## ÉTAPE 5 : AFFICHAGE DES IMAGES DANS L’ESPACE MORPHOLOGIQUE ----
 #visual representation of morphospace
 #-> ! requires the actual images !
-#add img path
+# Définir les chemins vers les images originales
 img_dir <- "~/datasets/pointB_wp2/orig"
 z <- z |> mutate(img_path=str_c(img_dir, "/", objid, ".jpg"))
 #sum(file.exists(z$img_path))
 
-# Function to pre-process images
+# Prétraitement des images (rognage + amélioration du contraste)
 preprocess <- function(x) {
   x |>
     # remove 31 pixels from the bottom (=the scale bar)
@@ -127,7 +128,6 @@ circleFun <- function(center = c(0,0),diameter = 1, npoints = 100){
 }
 circ <- circleFun(c(0,0),2,npoints = 500)
 
-
 #to filter most important axes (highest contribution to plane)
 contribs<-data.frame(pcaw$var$contrib); contribs$feature<- rownames(contribs)
 contribs<- contribs %>% mutate(Dim.12 = abs(Dim.1) + abs(Dim.2),
@@ -135,7 +135,7 @@ contribs<- contribs %>% mutate(Dim.12 = abs(Dim.1) + abs(Dim.2),
                                Dim.34 = abs(Dim.3) + abs(Dim.4))
 var_contrib <- rownames(contribs[order(contribs$Dim.12, decreasing = TRUE),])[1:12]
 
-
+# Homogénéisation des échelles pour le biplot
 #homogenize scaling between individuals & variables for correct biplot
 # Change scaling of variables/columns from scaling 1 to 2
 eig <- pcaw$eig[,1]
@@ -150,6 +150,8 @@ cols<- as.data.frame(cols)
 library(stringr)
 cols$trait2<- str_to_title(cols$trait2)
 pca_coor<-left_join(pca_coor, cols[,c(2, 7)], by=c("name"="name2"))
+
+# Affichage final : morphospace avec images et flèches
 
 ggmorph_tile(pcaw, z$img_path, steps=18, n_imgs=3, fun=preprocess, dimensions=c(1,2)) +
   geom_path(data=circ, aes(x*7,y*7), lty=2, color = "grey", alpha = 0.7) + #adapt scaling of circle to fit the arrows (here: 7 for plane 12; 5 for plane 34)
