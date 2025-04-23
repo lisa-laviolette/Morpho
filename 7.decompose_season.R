@@ -8,8 +8,13 @@ library("ggforce")
 library("lubridate")
 library("stlplus")
 
-load("6_incl2020.Rdata")
+load("6_incl2020.Rdata") # dcomb = zooplancton régularisé / er = environnement régularisé
 
+# Pour chaque variable, décomposer la série temporelle en :
+# - tendance (trend)
+# - saisonnalité (seasonal)
+# - résidu (remainder)
+# La combinaison trend + remainder = signal sans saisonnalité
 ## Decompose all data on 2009-2017 ----
 # get number of points per year
 count(er, year(date)) |> count(n)
@@ -27,7 +32,7 @@ ds <- dcomb |>
   }) |>
   ungroup()
 
-# force order of variables
+# Organisation des variables dans un ordre contrôlé pour faciliter les tracés
 ds$var <- factor(ds$var, levels=c(
   "temperature", "salinity", "density", "oxygen", "no2", "no3", "po4", "sioh4", "poc", "pon", "chla",
   "conc", "nb_morphs", "MRic", "MDiv", "MEve",
@@ -36,6 +41,8 @@ ds$var <- factor(ds$var, levels=c(
   ))
 
 # plot all decompositions
+# Visualisation par variable des composantes décomposées (1 PDF par variable)
+
 dst <- ds |>
   mutate(rest=trend+remainder) |>
   select(-trend, -remainder) |>
@@ -53,7 +60,10 @@ p <- lapply(levels(dst$var), function(v){
 })
 dev.off()
 
-## Decompose environmental data on 2000-2017 ----
+
+## ÉTAPE 2 : DÉCOMPOSITION DES DONNÉES ENVIRONNEMENTALES (2000–2017) ----
+
+# Même logique de décomposition avec une fenêtre de tendance plus longue (8 ans)
 
 es <- er |>
   gather(key="var", val="val", -date) |>
@@ -65,10 +75,10 @@ es <- er |>
   }) |>
   ungroup()
 
-# force order of variables
+# Ordre contrôlé des variables environnementales
 es$var <- factor(es$var, levels=c("temperature", "salinity", "density", "oxygen", "no2", "no3", "po4", "sioh4", "poc", "pon", "chla"))
 
-# plot all decompositions
+# Visualisation des composantes (PDF)
 est <- es |>
   mutate(rest=trend+remainder) |>
   select(-trend, -remainder) |>
