@@ -15,7 +15,7 @@ library("castr")
 env <- read_csv("data/radehydro_ctd.csv", col_types=cols(), guess_max=100000) |>
   mutate(date=as.Date(date_time))
 
-# eliminate data with bad qc
+# eliminate data with bad qc, Filtrage par qualité qc
 envq <- select(env, date, depth, starts_with("q_"))
 envv <- select(env, str_replace(names(envq), "q_", ""))
 env <- left_join(
@@ -52,7 +52,7 @@ env <- spread(env, var, val) |>
   rename(density=sigma_theta, oxygen=oxygen_winkler) |>
   gather(var, val, -date, -depth)
 
-# cleanup some values
+# cleanup some values,  Nettoyage complémentaire des valeurs aberrantes
 ggplot(env) + geom_histogram(aes(x=val), bins=50) + facet_wrap(~var, scales="free")
 ggplot(env) + geom_point(aes(x=date, y=val, colour=depth), shape=".") + facet_wrap(~var, scales="free")
 env <- spread(env, key=var, value=val)
@@ -62,10 +62,11 @@ env$density[env$density < 23] <- NA
 env <- gather(env, key=var, value=val, -date, -depth)
 
 
-# integrate all variables over depth
+# integrate all variables over depth 0–75 m
+# Moyenne pondérée sur la colonne d'eau de 0 à 75 m
 envi <- env |>
   group_by(date, var) |>
-  summarise(val=integrate(val, depth, from=0, to=75, fun="mean")) |>
+  summarise(val=integrate(val, depth, from=0, to=75, fun="mean")) |>  
   ungroup()
 
 # plot resulting series
