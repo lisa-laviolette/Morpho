@@ -20,9 +20,9 @@ load("3_incl2020.Rdata")
 ## Create and inspect morphs ----
 
 # divide into 200 morphs through observation-weighted k-means
-#morphs <- wkmeans(select(z, Dim.1:Dim.4), k=200, w=z$conc, iter_max=100, nstart=50, cores=20)
-#save(morphs, file="morphs_incl2020_k150.Rdata")
-load("morphs_incl2020.Rdata")
+#morphs <- wkmeans(select(z, Dim.1:Dim.4), k=200, w=z$conc, iter_max=100, nstart=50, cores=20) #z$conc la contribution d’un objet dépend de son abondance
+#save(morphs, file="morphs_incl2020_k150.Rdata") 
+load("morphs_incl2020.Rdata") #fichier contenant les objects zoo, leur coordonnées dans l'espca PCA, les variables morph
 
 # add morph number to the full zooplankton data
 z$morph_nb <- factor(morphs$cluster)
@@ -38,7 +38,8 @@ centers <- bind_cols(centers, tot_conc)
 # plot morphs centers in PCA space
 ggplot(centers) +
   geom_point(aes(Dim.1, Dim.2, size=conc), alpha=0.5, shape=16, col="red") +
-  scale_size(range=c(1,10))
+  scale_size(range=c(1,10)) #Sa taille dépend de sa concentration
+
 
 
 # plot morphs in PCA space
@@ -68,7 +69,7 @@ ggplot(z) + coord_fixed() +
 conc_per_morph <- z |> group_by(morph_nb, taxon) |> summarise(conc=sum(conc))
 ggplot(conc_per_morph) + geom_col(aes(x=morph_nb, y=conc, fill=taxon)) + scale_fill_discrete(guide="none")
 ggplot(filter(conc_per_morph, taxon != "Copepoda")) + geom_col(aes(x=morph_nb, y=conc, fill=taxon)) + scale_fill_discrete(guide="none")
-# -> the morphs do not contain only one species
+# -> the morphs do not contain only one species  les morphs ne correspondent pas à des espèces → bonne chose pour une approche morphologique indépendante de la taxonomie
 
 # # are the morphs present on all dates ?
 # tab <- dmesures_sna |> select(objid, date, g_kmeansw) |>
