@@ -1,23 +1,24 @@
 #
 # Put time series on a regular time coordinate
-#
+# Régularisation temporelle des séries zooplancton et environnement
 # (c) 2018 Jean-Olivier Irisson, GNU General Public License v3
 
 library("tidyverse")
 library("castr")
 
-load("2_incl2020.Rdata") # env
-load("5_incl2020.Rdata") # zoo
-
+load("2_incl2020.Rdata") # Données environnementales (e)
+load("5_incl2020.Rdata") # Données de diversité zooplanctonique (d)
+## ÉTAPE 1 : DÉFINITION D’UNE GRILLE DE TEMPS RÉGULIÈRE ----
 # define a new regular coordinate
+# Dates hebdomadaires couvrant toute la période, avec décalage d’un jour (meilleur alignement)
 reg_dates <- seq(from=min(e$date)-1, to=max(e$date), by=7)
 # Nb: shift by 1 day because we get more matches in env data
-sum(reg_dates %in% e$date)
+sum(reg_dates %in% e$date) # contrôle du recouvrement
 
 
 ## Regularise environemental data ----
 
-# 1. leaving NAs when data is not there
+# 1. Approche conservative : NA si pas de mesure proche
 ew <- spread(e, key="var", value="val") |>
   # compute closest regular date
   mutate(
@@ -31,9 +32,10 @@ ew <- spread(e, key="var", value="val") |>
   rename(date=reg_date)
 # add missing values when the data is too far from a regular date
 reg <- tibble(date=reg_dates)
-er <- left_join(reg, ew, by="date")
+er <- left_join(reg, ew, by="date") # série environnementale régulière avec NA
 
-# 2. interpolating through NAs
+# 2. Approche interpolée (linéaire)
+
 ef <- e |>
   group_by(var) |>
   do({
@@ -46,17 +48,17 @@ ef <- e |>
   ungroup() |>
   spread(key="var", val="val")
 
-# plot two versions
+# Visualisation comparative
 ggplot(gather(er, var, val, -date)) + geom_path(aes(date, val), na.rm=T) + facet_wrap(~var, scales="free_y")
 ggplot(gather(ef, var, val, -date)) + geom_path(aes(date, val), na.rm=T) + facet_wrap(~var, scales="free_y")
 
 
-## Regularise zooplankton data ----
-
+## ÉTAPE 3 : RÉGULARISATION DES DONNÉES ZOOPLANCTONIQUES ----
+# Réduire aux années analysées
 reg_dates <- reg_dates[reg_dates >= "2009-01-01"]
 reg_dates <- reg_dates[reg_dates < "2021-01-01"]
 
-# 1. leaving NAs when data is not there
+# 1. Alignement simple avec NA si trop loin
 dw <- d |>
   # compute closest regular date
   mutate(
@@ -71,9 +73,9 @@ dw <- d |>
 
 # add missing values when the data is too far from a regular date
 reg <- tibble(date=reg_dates)
-dr <- left_join(reg, dw, by="date")
+dr <- left_join(reg, dw, by="date") # série zoo régulière avec NA
 
-# 2. interpolating through NAs
+# 2. Interpolation linéaire
 df <- gather(d, key="var", val="val", -date) |>
   group_by(var) |>
   do({
@@ -86,14 +88,20 @@ df <- gather(d, key="var", val="val", -date) |>
   ungroup() |>
   spread(key="var", val="val")
 
+## ÉTAPE 4 : TRAITEMENT DES TROUS (OPTION MANUSCRIT) ----
 
-# 3. check size of NA gabs and fill those that are small (1, 2 weeks); leave others NA (option used in manuscript)
+# Combiner données NA et interpolées et décider quoi conserver
+# - on garde l’interpolation pour petits trous (≤ 2 semaines)
+# - on garde les NA pour les grands trous
+# check size of NA gabs and fill those that are small (1, 2 weeks); leave others NA (option used in manuscript)
 gaps<- df |>
   #mutate(week= rep(1:52, 11),
   #       year= year(gaps$date)) |>
   left_join(dr, by="date") |>
   arrange(date) |>
   mutate(gapID = data.table::rleid(is.na(nb_morphs.y)))
+
+# Fusion des sources en fonction du type de trou détecté
 
 gaps2<- gaps |>  filter(is.na(nb_morphs.y)) |>
   count(gapID, name = "gapsize") |>
@@ -137,10 +145,12 @@ dcomb<- gaps |>
 #gaps$MonDay<-paste(month(gaps$date), day(gaps$date), sep="-")
 
 # plot again
+# Visualisation comparative
+
 ggplot(gather(dr, var, val, -date)) + geom_path(aes(date, val), na.rm=T) + facet_wrap(~var, scales="free_y")
 ggplot(gather(df, var, val, -date)) + geom_path(aes(date, val), na.rm=T) + facet_wrap(~var, scales="free_y")
 ggplot(gather(dcomb, var, val, -date)) + geom_path(aes(date, val), na.rm=T) + facet_wrap(~var, scales="free_y")
 
 ## Combine and save ----
-dcomb<-left_join(dcomb, ef) #or decide which option to take
+dcomb<-left_join(dcomb, ef) #or decide which option to take # combinaison avec environnement interpolé
 save(dr, df, dcomb, er, ef, file="6_incl2020.Rdata")
